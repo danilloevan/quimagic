@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/props/palm_tree.png" id="1_tex"]
+
+[sub_resource type="CircleShape2D" id="Shape_0"]
+radius = 16
+
+[node name="palm_tree" type="StaticBody2D"]
+y_sort_enabled = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -70)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("1_tex")
+
+[node name="CollisionShape2D_0" type="CollisionShape2D" parent="."]
+position = Vector2(0, -10)
+shape = SubResource("Shape_0")
+

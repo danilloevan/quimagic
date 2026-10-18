@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/props/salt_crystals.png" id="1_tex"]
+
+[sub_resource type="CapsuleShape2D" id="Shape_0"]
+radius = 20
+height = 80
+
+[node name="salt_crystals" type="StaticBody2D"]
+y_sort_enabled = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -30)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("1_tex")
+
+[node name="CollisionShape2D_0" type="CollisionShape2D" parent="."]
+position = Vector2(0, -15)
+shape = SubResource("Shape_0")
+

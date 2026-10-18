@@ -1,0 +1,33 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/props/cave_entrance.png" id="1_tex"]
+
+[sub_resource type="RectangleShape2D" id="Shape_0"]
+size = Vector2(40, 50)
+
+[sub_resource type="RectangleShape2D" id="Shape_1"]
+size = Vector2(40, 50)
+
+[sub_resource type="RectangleShape2D" id="Shape_2"]
+size = Vector2(120, 40)
+
+[node name="cave_entrance" type="StaticBody2D"]
+y_sort_enabled = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -60)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("1_tex")
+
+[node name="CollisionShape2D_0" type="CollisionShape2D" parent="."]
+position = Vector2(-45, -20)
+shape = SubResource("Shape_0")
+
+[node name="CollisionShape2D_1" type="CollisionShape2D" parent="."]
+position = Vector2(45, -20)
+shape = SubResource("Shape_1")
+
+[node name="CollisionShape2D_2" type="CollisionShape2D" parent="."]
+position = Vector2(0, -70)
+shape = SubResource("Shape_2")
+
