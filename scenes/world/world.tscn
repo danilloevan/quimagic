@@ -1,17 +1,19 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
-[ext_resource type="PackedScene" path="res://scenes/world/map_generator.tscn" id="1_map_gen"]
-[ext_resource type="PackedScene" path="res://scenes/world/debug_camera.tscn" id="2_cam"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player"]
+[ext_resource type="Script" path="res://scripts/world/world.gd" id="1_world"]
+[ext_resource type="PackedScene" path="res://scenes/world/map_generator.tscn" id="2_map_gen"]
+[ext_resource type="PackedScene" path="res://scenes/world/debug_camera.tscn" id="3_cam"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_player"]
 
 [node name="World" type="Node2D"]
 y_sort_enabled = true
+script = ExtResource("1_world")
 
-[node name="MapGenerator" parent="." node_paths=PackedStringArray("player") instance=ExtResource("1_map_gen")]
+[node name="MapGenerator" parent="." node_paths=PackedStringArray("player") instance=ExtResource("2_map_gen")]
 player = NodePath("PropsContainer/Player")
 
-[node name="Player" parent="MapGenerator/PropsContainer" instance=ExtResource("3_player")]
+[node name="Player" parent="MapGenerator/PropsContainer" instance=ExtResource("4_player")]
 
-[node name="DebugCamera" parent="." node_paths=PackedStringArray("map_generator", "target") instance=ExtResource("2_cam")]
+[node name="DebugCamera" parent="." node_paths=PackedStringArray("map_generator", "target") instance=ExtResource("3_cam")]
 map_generator = NodePath("../MapGenerator")
 target = NodePath("../MapGenerator/PropsContainer/Player")

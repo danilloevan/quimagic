@@ -110,4 +110,5 @@ func _update_label() -> void:
 		controls += " | [Tab] " + ("Seguir Personagem" if free_mode else "Câmera Livre")
 	info_label.text = "Quimagic — Protótipo de Cenário Procedural (Godot 4)\n" + \
 		"Semente Atual: %d\n" % current_seed + \
-		controls + " | [Scroll] Zoom | [R] Nova Semente"
+		controls + " | [B] Bancada Alquímica | [Scroll] Zoom | [R] Nova Semente"
+
