@@ -94,6 +94,9 @@ var elevation_noise: FastNoiseLite
 var moisture_noise: FastNoiseLite
 var path_noise: FastNoiseLite
 
+# Paredão da montanha com contorno orgânico (shader), criado sob demanda
+var cliff_renderer: CliffRenderer
+
 # Campo do caminho em vértices (cantos dos tiles) e células resultantes (célula -> máscara)
 var _path_vertices: Dictionary = {}
 var _path_cells: Dictionary = {}
@@ -115,6 +118,7 @@ func set_seed_and_generate(new_seed: int) -> void:
 
 func generate_map() -> void:
 	_ensure_path_layer()
+	_ensure_cliff_renderer()
 	_init_noises()
 	_clear_map()
 	
@@ -163,6 +167,16 @@ func _ensure_path_layer() -> void:
 	path_layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
+## A falésia fica acima da grama e dos caminhos, mas abaixo da decoração e dos props
+func _ensure_cliff_renderer() -> void:
+	if cliff_renderer:
+		return
+	cliff_renderer = CliffRenderer.new()
+	cliff_renderer.name = "CliffRenderer"
+	add_child(cliff_renderer)
+	move_child(cliff_renderer, path_layer.get_index() + 1)
+
+
 func _clear_map() -> void:
 	if ground_layer:
 		ground_layer.clear()
@@ -193,17 +207,9 @@ func _generate_base_terrain() -> void:
 
 
 func _generate_cliffs() -> void:
-	# Falésias no terço superior (Norte) com profundidade de paredão rochoso
-	for x in range(map_width):
-		var local_cliff_y = _cliff_y_at(x)
-		
-		# Topo e paredes da montanha
-		for y in range(0, local_cliff_y - 2):
-			ground_layer.set_cell(Vector2i(x, y), TILE_SOURCE_ID, TILE_CLIFF_TOP)
-		
-		ground_layer.set_cell(Vector2i(x, local_cliff_y - 2), TILE_SOURCE_ID, TILE_CLIFF_TOP_EDGE)
-		ground_layer.set_cell(Vector2i(x, local_cliff_y - 1), TILE_SOURCE_ID, TILE_CLIFF_WALL_1 if x % 2 == 0 else TILE_CLIFF_WALL_2)
-		ground_layer.set_cell(Vector2i(x, local_cliff_y), TILE_SOURCE_ID, TILE_CLIFF_BASE)
+	# Falésias no terço superior (Norte): contorno contínuo por pixel, rochas arredondadas
+	# e colisão própria. A grama continua por baixo e aparece nas reentrâncias do paredão.
+	cliff_renderer.generate(elevation_noise, map_width, tile_size, seed_val)
 
 
 func _generate_water_shores() -> void:
@@ -265,9 +271,7 @@ func _generate_water_shores() -> void:
 
 
 func _cliff_y_at(x: int) -> int:
-	var cliff_baseline = 10
-	var elev_offset = int(elevation_noise.get_noise_2d(x * 1.5, 0) * 5.0)
-	return clampi(cliff_baseline + elev_offset, 6, 14)
+	return cliff_renderer.last_cliff_row(x)
 
 
 func _generate_paths() -> void:
@@ -351,6 +355,8 @@ func _is_vertex_walkable(v: Vector2i) -> bool:
 	for cell in [v, v + Vector2i(-1, 0), v + Vector2i(0, -1), v + Vector2i(-1, -1)]:
 		if not _is_within_bounds(cell):
 			continue
+		if cliff_renderer and cliff_renderer.is_cliff_cell(cell):
+			return false
 		var tile := ground_layer.get_cell_atlas_coords(cell)
 		if _is_water_tile(tile) or _is_cliff_tile(tile):
 			return false
@@ -390,7 +396,7 @@ func _spawn_landmarks_and_props() -> void:
 
 	# 1. Entrada da Caverna na falésia
 	var cave_x = int(map_width * 0.35)
-	var cave_y = 10
+	var cave_y = _cliff_y_at(cave_x)
 	var cave_world_pos = Vector2(cave_x * tile_size, cave_y * tile_size)
 	_instantiate_prop(SCENE_CAVE, cave_world_pos)
 	
@@ -457,7 +463,8 @@ func _spawn_landmarks_and_props() -> void:
 		var ground_tile = ground_layer.get_cell_atlas_coords(tile_coord)
 		
 		# Nunca instanciar em água, areia ou estrada de pedras
-		if not _is_water_or_sand(ground_tile) and not _is_near_path(tile_coord, 1):
+		if not _is_water_or_sand(ground_tile) and not _is_near_path(tile_coord, 1) \
+				and not cliff_renderer.is_cliff_cell(tile_coord + Vector2i(0, -1)):
 			var world_pos = Vector2(rx * tile_size, ry * tile_size)
 			
 			# Distância segura do poço e caverna

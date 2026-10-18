@@ -7,7 +7,7 @@ extends Camera2D
 @export var max_zoom: float = 2.5
 @export var map_generator: MapGenerator
 
-@onready var info_label: Label = $CanvasLayer/InfoLabel
+@onready var info_label: Label = $CanvasLayer/PanelContainer/MarginContainer/InfoLabel
 
 
 func _ready() -> void:
