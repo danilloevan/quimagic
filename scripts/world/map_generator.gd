@@ -27,6 +27,10 @@ extends Node2D
 @export var decor_layer: TileMapLayer
 @export var props_container: Node2D
 
+@export_group("Personagem")
+## Personagem jogável (fica dentro do PropsContainer para ordenar por Y com os props)
+@export var player: Player
+
 # Definições de coordenadas no Atlas (TileSetAtlasSource)
 const TILE_SOURCE_ID = 0
 
@@ -129,6 +133,7 @@ func generate_map() -> void:
 	_render_paths()
 	_generate_wheat_fields()
 	_spawn_landmarks_and_props()
+	_place_player()
 	
 	map_generated.emit(seed_val)
 	print("[Quimagic Procedural World] Mapa gerado com sucesso! Semente: ", seed_val)
@@ -188,6 +193,8 @@ func _clear_map() -> void:
 		decor_layer.clear()
 	if props_container:
 		for child in props_container.get_children():
+			if child == player:
+				continue
 			child.queue_free()
 
 
@@ -476,6 +483,24 @@ func _spawn_landmarks_and_props() -> void:
 					_instantiate_prop(SCENE_PALM_TREE, world_pos)
 				else:
 					_instantiate_prop(SCENE_BOULDER, world_pos)
+
+
+## Spawn na praça do poço, logo ao sul dele (sempre caminho livre, longe da água)
+func _place_player() -> void:
+	if not player:
+		return
+	player.map_generator = self
+	var well_pos := Vector2(int(map_width * 0.45) * tile_size, int(map_height * 0.52) * tile_size)
+	player.teleport(global_position + well_pos + Vector2(0, tile_size * 1.75))
+
+
+## Água, mar e fora dos limites do mapa não são caminháveis (falésias e props usam colisão física)
+func is_world_pos_walkable(world_pos: Vector2) -> bool:
+	var local := world_pos - global_position
+	var cell := Vector2i(floori(local.x / tile_size), floori(local.y / tile_size))
+	if not _is_within_bounds(cell):
+		return false
+	return not _is_water_tile(ground_layer.get_cell_atlas_coords(cell))
 
 
 func _instantiate_prop(scene: PackedScene, pos: Vector2) -> void:
