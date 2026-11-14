@@ -138,6 +138,8 @@ func _play_dissolve_animation() -> void:
 	_player_in_range = false
 	if _prompt_root:
 		_prompt_root.visible = false
+	if is_instance_valid(collision_shape):
+		collision_shape.set_deferred("disabled", true)
 
 	var mat := ShaderMaterial.new()
 	mat.shader = DISSOLVE_SHADER

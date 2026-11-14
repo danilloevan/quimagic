@@ -17,14 +17,14 @@ func _ready() -> void:
 func _setup_entrance_trigger() -> void:
 	var trigger := Area2D.new()
 	trigger.name = "EntranceTrigger"
-	trigger.position = Vector2(0, -28)
+	trigger.position = Vector2(0, -18)
 	trigger.monitoring = true
 	trigger.monitorable = false
 	trigger.collision_layer = 0
 	trigger.collision_mask = 1
 
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(44, 24)
+	shape.size = Vector2(72, 32)
 	var col := CollisionShape2D.new()
 	col.shape = shape
 	trigger.add_child(col)

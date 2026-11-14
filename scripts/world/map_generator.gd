@@ -220,6 +220,9 @@ func _generate_cliffs() -> void:
 	# Falésias no terço superior (Norte): contorno contínuo por pixel, rochas arredondadas
 	# e colisão própria. A grama continua por baixo e aparece nas reentrâncias do paredão.
 	cliff_renderer.generate(elevation_noise, map_width, tile_size, seed_val)
+	var cave_x := int(map_width * 0.35)
+	var cave_y := _cliff_y_at(cave_x)
+	cliff_renderer.carve_cave_opening(Vector2(cave_x * tile_size, cave_y * tile_size))
 
 
 func _generate_water_shores() -> void:
@@ -410,15 +413,15 @@ func _spawn_landmarks_and_props() -> void:
 	var cave_world_pos = Vector2(cave_x * tile_size, cave_y * tile_size)
 	_instantiate_prop(SCENE_CAVE, cave_world_pos)
 	
-	# Barreira principal de Sal (NaCl) bloqueando a entrada da caverna
-	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(0, 8))
-
 	# Cristais elementares próximos à entrada da caverna
-	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(70, 15))
-	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(-80, 25))
+	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(95, 18))
+	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(-95, 25))
 	_instantiate_prop(SCENE_EMERALD_CRYSTAL, cave_world_pos + Vector2(-120, -15))
 	_instantiate_prop(SCENE_RUBY_CRYSTAL, cave_world_pos + Vector2(-150, 10))
-	_instantiate_prop(SCENE_ORE_ROCK, cave_world_pos + Vector2(120, 20))
+	_instantiate_prop(SCENE_ORE_ROCK, cave_world_pos + Vector2(135, 20))
+
+	# Barreira principal de Sal (NaCl) bloqueando a entrada da caverna
+	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(0, 8))
 
 	# 2. Poço Central de Pedra
 	var well_x = int(map_width * 0.45)

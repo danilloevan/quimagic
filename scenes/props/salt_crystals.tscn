@@ -4,8 +4,8 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/props/salt_crystals.png" id="2_tex"]
 
 [sub_resource type="CapsuleShape2D" id="Shape_0"]
-radius = 20
-height = 80
+radius = 16.0
+height = 88.0
 
 [node name="salt_crystals" type="StaticBody2D"]
 y_sort_enabled = true
@@ -17,6 +17,7 @@ scale = Vector2(0.5, 0.5)
 texture = ExtResource("2_tex")
 
 [node name="CollisionShape2D_0" type="CollisionShape2D" parent="."]
-position = Vector2(0, -15)
+position = Vector2(0, -10)
+rotation = 1.5707964
 shape = SubResource("Shape_0")
 

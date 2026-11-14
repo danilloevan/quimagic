@@ -105,21 +105,78 @@ func _compute_last_rows() -> void:
 		_last_rows[cx] = int(floor((deepest - 4.0) / _tile_size))
 
 
-func _build_collision(w: int) -> void:
+func _build_collision(w: int, cave_pos: Vector2 = Vector2(-1.0, -1.0), doorway_half_width: float = 42.0, arch_half_width: float = 76.0) -> void:
+	if _body:
+		remove_child(_body)
+		_body.queue_free()
 	_body = StaticBody2D.new()
 	_body.name = "CliffCollision"
-	var poly := CollisionPolygon2D.new()
-	var pts := PackedVector2Array()
-	pts.append(Vector2(0, 0))
-	var x := 0
-	while x < w:
-		pts.append(Vector2(x, bottom_px[x] - COLLISION_INSET))
-		x += COLLISION_STEP
-	pts.append(Vector2(w, bottom_px[w - 1] - COLLISION_INSET))
-	pts.append(Vector2(w, 0))
-	poly.polygon = pts
-	_body.add_child(poly)
+
+	if cave_pos.x < 0.0:
+		var poly := CollisionPolygon2D.new()
+		var pts := PackedVector2Array()
+		pts.append(Vector2(0, 0))
+		var x := 0
+		while x < w:
+			pts.append(Vector2(x, bottom_px[x] - COLLISION_INSET))
+			x += COLLISION_STEP
+		pts.append(Vector2(w, bottom_px[w - 1] - COLLISION_INSET))
+		pts.append(Vector2(w, 0))
+		poly.polygon = pts
+		_body.add_child(poly)
+	else:
+		var left_end := clampi(int(floor(cave_pos.x - doorway_half_width)), 0, w - 1)
+		var right_start := clampi(int(ceil(cave_pos.x + doorway_half_width)), 0, w - 1)
+		var left_arch_start := cave_pos.x - arch_half_width
+		var right_arch_end := cave_pos.x + arch_half_width
+		var pillar_max_y := cave_pos.y + 8.0
+
+		if left_end > 0:
+			var left_poly := CollisionPolygon2D.new()
+			left_poly.name = "LeftCliffPolygon"
+			var left_pts := PackedVector2Array()
+			left_pts.append(Vector2(0, 0))
+			var x := 0
+			while x < left_end:
+				var cy := bottom_px[x] - COLLISION_INSET
+				if x >= left_arch_start:
+					cy = minf(cy, pillar_max_y)
+				left_pts.append(Vector2(x, cy))
+				x += COLLISION_STEP
+			var left_end_y := minf(bottom_px[left_end] - COLLISION_INSET, pillar_max_y)
+			left_pts.append(Vector2(left_end, left_end_y))
+			left_pts.append(Vector2(left_end, 0))
+			left_poly.polygon = left_pts
+			_body.add_child(left_poly)
+
+		if right_start < w - 1:
+			var right_poly := CollisionPolygon2D.new()
+			right_poly.name = "RightCliffPolygon"
+			var right_pts := PackedVector2Array()
+			right_pts.append(Vector2(right_start, 0))
+			var right_start_y := minf(bottom_px[right_start] - COLLISION_INSET, pillar_max_y)
+			right_pts.append(Vector2(right_start, right_start_y))
+			var x := right_start + COLLISION_STEP
+			while x < w:
+				var cy := bottom_px[x] - COLLISION_INSET
+				if x <= right_arch_end:
+					cy = minf(cy, pillar_max_y)
+				right_pts.append(Vector2(x, cy))
+				x += COLLISION_STEP
+			right_pts.append(Vector2(w, bottom_px[w - 1] - COLLISION_INSET))
+			right_pts.append(Vector2(w, 0))
+			right_poly.polygon = right_pts
+			_body.add_child(right_poly)
+
 	add_child(_body)
+
+
+## Abre uma passagem na colisão da falésia exatamente na entrada da caverna
+func carve_cave_opening(cave_pos: Vector2, doorway_half_width: float = 42.0, arch_half_width: float = 76.0) -> void:
+	var w := _width_tiles * _tile_size
+	if w <= 0 or bottom_px.is_empty():
+		return
+	_build_collision(w, cave_pos, doorway_half_width, arch_half_width)
 
 
 ## Sequência de "rochas" lado a lado: cada uma gera um arco semicircular (bojo arredondado).
