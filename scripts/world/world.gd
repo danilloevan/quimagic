@@ -2,6 +2,8 @@ class_name World
 extends Node2D
 
 const BenchView = preload("res://scripts/bench/bench_view.gd")
+const CaveEntrance = preload("res://scripts/props/cave_entrance.gd")
+const DemoEndingOverlay = preload("res://scripts/ui/demo_ending_overlay.gd")
 
 ## Controlador principal do mundo de jogo.
 
@@ -14,11 +16,15 @@ const BenchView = preload("res://scripts/bench/bench_view.gd")
 var bench_view: BenchView
 var _bench_hud_btn: Button
 var _inventory_hud_label: Label
+var _demo_ended: bool = false
 
 
 func _ready() -> void:
 	_create_hud()
 	_create_bench()
+	if map_generator:
+		map_generator.map_generated.connect(func(_seed: int) -> void: _connect_cave_entrance())
+	_connect_cave_entrance()
 
 
 func _create_hud() -> void:
@@ -91,9 +97,35 @@ func _create_bench() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _demo_ended:
+		return
 	if event.is_action_pressed("toggle_bench") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_B):
 		_toggle_bench()
 		get_viewport().set_input_as_handled()
+
+
+func _connect_cave_entrance() -> void:
+	for node in get_tree().get_nodes_in_group("cave_entrance"):
+		var cave := node as CaveEntrance
+		if cave and not cave.player_entered.is_connected(_on_cave_entered):
+			cave.player_entered.connect(_on_cave_entered)
+
+
+func _on_cave_entered() -> void:
+	if _demo_ended:
+		return
+	_demo_ended = true
+	if bench_view and bench_view.visible:
+		bench_view.close_bench()
+	if player:
+		player.input_enabled = false
+		player.velocity = Vector2.ZERO
+		var step_in := create_tween()
+		step_in.set_parallel(true)
+		step_in.tween_property(player, "position:y", player.position.y - 16.0, 0.45).set_trans(Tween.TRANS_SINE)
+		step_in.tween_property(player, "modulate:a", 0.0, 0.45).set_trans(Tween.TRANS_SINE)
+		await step_in.finished
+	add_child(DemoEndingOverlay.new())
 
 
 func _toggle_bench() -> void:

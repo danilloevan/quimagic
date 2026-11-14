@@ -22,6 +22,11 @@ func reset_inventory() -> void:
 	inventory_changed.emit()
 
 
+func reset_all() -> void:
+	discovered.clear()
+	reset_inventory()
+
+
 func get_count(id: String) -> int:
 	return int(inventory.get(id, 0))
 

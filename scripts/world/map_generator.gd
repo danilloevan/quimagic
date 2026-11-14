@@ -410,6 +410,9 @@ func _spawn_landmarks_and_props() -> void:
 	var cave_world_pos = Vector2(cave_x * tile_size, cave_y * tile_size)
 	_instantiate_prop(SCENE_CAVE, cave_world_pos)
 	
+	# Barreira principal de Sal (NaCl) bloqueando a entrada da caverna
+	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(0, 8))
+
 	# Cristais elementares próximos à entrada da caverna
 	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(70, 15))
 	_instantiate_prop(SCENE_SALT_CRYSTAL, cave_world_pos + Vector2(-80, 25))
