@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dlwjy1kdj0ckk"
-path="res://.godot/imported/walk_west.png-bdbfaf586f9b76964e094cd386125206.ctex"
+uid="uid://c30ickk1ix42k"
+path="res://.godot/imported/walk_south_east.png-19d9633b48813506b9db1bb3651cb6a1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/student_girl/walk_west.png"
-dest_files=["res://.godot/imported/walk_west.png-bdbfaf586f9b76964e094cd386125206.ctex"]
+source_file="res://assets/sprites/characters/hidro/walk_south_east.png"
+dest_files=["res://.godot/imported/walk_south_east.png-19d9633b48813506b9db1bb3651cb6a1.ctex"]
 
 [params]
 

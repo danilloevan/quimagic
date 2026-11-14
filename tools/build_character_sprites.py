@@ -1,27 +1,38 @@
 """
-Converte o export da personagem (PNGs de rotação + GIFs de caminhada) em spritesheets
-PNG que o Godot importa nativamente, e gera o recurso SpriteFrames (.tres) pronto para uso.
+Converte os GIFs de animação da Hidro (8 direções) em spritesheets PNG que o Godot
+importa nativamente, e gera o recurso SpriteFrames (.tres) pronto para uso.
 
 Uso:
-    python tools/build_character_sprites.py "C:/caminho/para/character - little_student_girls"
+    python tools/build_character_sprites.py ["C:/caminho/para/hidro moves"]
 
-Todos os quadros são normalizados para 44x44 (tamanho dos GIFs de caminhada). Os PNGs de
-rotação (32x32) são centralizados nesse quadro, o que mantém os pés exatamente na mesma
-linha (y = 37) em todas as animações, evitando "pulos" ao trocar de idle para walk.
+Todos os quadros são normalizados para 232x232 centralizando o canvas exportado pelo
+PixelLab, o que mantém os pés exatamente na mesma linha (y = 195) em todas as direções.
 """
 import os
 import sys
 
 from PIL import Image, ImageDraw
 
-FRAME = 44
+FRAME = 232
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_DIR = os.path.join(PROJECT_ROOT, "assets", "sprites", "characters", "student_girl")
-RES_DIR = "res://assets/sprites/characters/student_girl"
+DEFAULT_SRC_DIR = os.path.join(PROJECT_ROOT, "hidro moves")
+OUT_DIR = os.path.join(PROJECT_ROOT, "assets", "sprites", "characters", "hidro")
+RES_DIR = "res://assets/sprites/characters/hidro"
 
-# Ordem dos quadros de idle no spritesheet (8 direções)
-IDLE_DIRS = ["south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"]
-WALK_DIRS = ["south", "north", "east", "west"]
+# Ordem das 8 direções (usada tanto em idle quanto em walk)
+DIRS = ["south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"]
+
+# Quadro de contato/passagem mais neutro de cada ciclo para usar como pose parada (idle)
+IDLE_FRAME_INDEX = {
+    "south": 3,
+    "south-east": 6,
+    "east": 2,
+    "north-east": 7,
+    "north": 1,
+    "north-west": 5,
+    "west": 2,
+    "south-west": 6,
+}
 
 IDLE_FPS = 1.0
 WALK_FPS = 8.0
@@ -31,34 +42,42 @@ def anim_name(prefix: str, direction: str) -> str:
     return f"{prefix}_{direction.replace('-', '_')}"
 
 
+def dir_slug(direction: str) -> str:
+    return direction.replace("-", "_")
+
+
 def build_idle(src: str) -> None:
-    sheet = Image.new("RGBA", (FRAME * len(IDLE_DIRS), FRAME), (0, 0, 0, 0))
-    for i, d in enumerate(IDLE_DIRS):
-        img = Image.open(os.path.join(src, "Idle", "rotations", f"{d}.png")).convert("RGBA")
-        ox = (FRAME - img.width) // 2
-        oy = (FRAME - img.height) // 2
-        sheet.paste(img, (i * FRAME + ox, oy), img)
+    sheet = Image.new("RGBA", (FRAME * len(DIRS), FRAME), (0, 0, 0, 0))
+    for i, d in enumerate(DIRS):
+        gif = Image.open(os.path.join(src, f"Idle_v3_running_{d}.gif"))
+        gif.seek(IDLE_FRAME_INDEX[d])
+        frame = gif.convert("RGBA")
+        ox = (FRAME - gif.width) // 2
+        oy = (FRAME - gif.height) // 2
+        sheet.paste(frame, (i * FRAME + ox, oy), frame)
     sheet.save(os.path.join(OUT_DIR, "idle.png"))
 
 
 def build_walk(src: str) -> int:
     frame_count = 0
-    for d in WALK_DIRS:
-        gif = Image.open(os.path.join(src, "Idle", "walk animations", f"Idle_v3_walking_{d}.gif"))
+    for d in DIRS:
+        gif = Image.open(os.path.join(src, f"Idle_v3_running_{d}.gif"))
         n = gif.n_frames
         frame_count = n
+        ox = (FRAME - gif.width) // 2
+        oy = (FRAME - gif.height) // 2
         sheet = Image.new("RGBA", (FRAME * n, FRAME), (0, 0, 0, 0))
         for i in range(n):
             gif.seek(i)
             frame = gif.convert("RGBA")
-            sheet.paste(frame, (i * FRAME, 0), frame)
-        sheet.save(os.path.join(OUT_DIR, f"walk_{d}.png"))
+            sheet.paste(frame, (i * FRAME + ox, oy), frame)
+        sheet.save(os.path.join(OUT_DIR, f"walk_{dir_slug(d)}.png"))
     return frame_count
 
 
 def build_shadow() -> None:
     # Sombra elíptica suave sob os pés (desenhada em 4x e reduzida para ter borda macia)
-    w, h, s = 18, 7, 4
+    w, h, s = 22, 9, 4
     big = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     draw = ImageDraw.Draw(big)
     draw.ellipse((0, 0, w * s - 1, h * s - 1), fill=(20, 16, 30, 110))
@@ -72,10 +91,11 @@ def write_sprite_frames(walk_frames: int) -> None:
     anims = []
 
     ext.append(f'[ext_resource type="Texture2D" path="{RES_DIR}/idle.png" id="tex_idle"]')
-    for d in WALK_DIRS:
-        ext.append(f'[ext_resource type="Texture2D" path="{RES_DIR}/walk_{d}.png" id="tex_walk_{d}"]')
+    for d in DIRS:
+        slug = dir_slug(d)
+        ext.append(f'[ext_resource type="Texture2D" path="{RES_DIR}/walk_{slug}.png" id="tex_walk_{slug}"]')
 
-    for i, d in enumerate(IDLE_DIRS):
+    for i, d in enumerate(DIRS):
         sid = anim_name("idle", d)
         subs.append(
             f'[sub_resource type="AtlasTexture" id="{sid}"]\n'
@@ -91,13 +111,14 @@ def write_sprite_frames(walk_frames: int) -> None:
             "}"
         )
 
-    for d in WALK_DIRS:
+    for d in DIRS:
+        slug = dir_slug(d)
         frame_refs = []
         for i in range(walk_frames):
-            sid = f"walk_{d}_{i}"
+            sid = f"walk_{slug}_{i}"
             subs.append(
                 f'[sub_resource type="AtlasTexture" id="{sid}"]\n'
-                f'atlas = ExtResource("tex_walk_{d}")\n'
+                f'atlas = ExtResource("tex_walk_{slug}")\n'
                 f"region = Rect2({i * FRAME}, 0, {FRAME}, {FRAME})\n"
             )
             frame_refs.append(f'{{\n"duration": 1.0,\n"texture": SubResource("{sid}")\n}}')
@@ -105,7 +126,7 @@ def write_sprite_frames(walk_frames: int) -> None:
             "{\n"
             f'"frames": [{", ".join(frame_refs)}],\n'
             '"loop": true,\n'
-            f'"name": &"walk_{d}",\n'
+            f'"name": &"walk_{slug}",\n'
             f'"speed": {WALK_FPS}\n'
             "}"
         )
@@ -119,15 +140,12 @@ def write_sprite_frames(walk_frames: int) -> None:
     lines.append(f"animations = [{', '.join(anims)}]")
     lines.append("")
 
-    with open(os.path.join(OUT_DIR, "student_girl_frames.tres"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(OUT_DIR, "hidro_frames.tres"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(1)
-    src = sys.argv[1]
+    src = sys.argv[1] if len(sys.argv) >= 2 else DEFAULT_SRC_DIR
     os.makedirs(OUT_DIR, exist_ok=True)
     build_idle(src)
     walk_frames = build_walk(src)

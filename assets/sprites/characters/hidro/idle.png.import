@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ic5ieir0bfi"
-path="res://.godot/imported/idle.png-6c5eb082527d163ee126534de6bb6a51.ctex"
+uid="uid://vwr7tqeoh3uq"
+path="res://.godot/imported/idle.png-4d7b29a6e73e232738ea8420fc9511af.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/student_girl/idle.png"
-dest_files=["res://.godot/imported/idle.png-6c5eb082527d163ee126534de6bb6a51.ctex"]
+source_file="res://assets/sprites/characters/hidro/idle.png"
+dest_files=["res://.godot/imported/idle.png-4d7b29a6e73e232738ea8420fc9511af.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://chxdq2ittcbf3"
-path="res://.godot/imported/walk_north.png-15f071f4a8813ffe09a36a635276390a.ctex"
+uid="uid://chy7gmvc8fjc8"
+path="res://.godot/imported/icon_lightbulb.svg-ee77c97c57c9e7be121d836b06751195.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/student_girl/walk_north.png"
-dest_files=["res://.godot/imported/walk_north.png-15f071f4a8813ffe09a36a635276390a.ctex"]
+source_file="res://assets/sprites/intro/icon_lightbulb.svg"
+dest_files=["res://.godot/imported/icon_lightbulb.svg-ee77c97c57c9e7be121d836b06751195.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false
