@@ -95,6 +95,7 @@ const SCENE_PALM_TREE = preload("res://scenes/props/palm_tree.tscn")
 const SCENE_BOULDER = preload("res://scenes/props/boulder.tscn")
 const SCENE_ELEMENT_PICKUP = preload("res://scenes/world/element_pickup.tscn")
 const ElementPickup = preload("res://scripts/world/element_pickup.gd")
+const BeachRenderer = preload("res://scripts/world/beach_renderer.gd")
 
 var elevation_noise: FastNoiseLite
 var moisture_noise: FastNoiseLite
@@ -102,6 +103,8 @@ var path_noise: FastNoiseLite
 
 # Paredão da montanha com contorno orgânico (shader), criado sob demanda
 var cliff_renderer: CliffRenderer
+# Praia procedural e mar animado com ondas (shader), criado sob demanda
+var beach_renderer: BeachRenderer
 
 # Campo do caminho em vértices (cantos dos tiles) e células resultantes (célula -> máscara)
 var _path_vertices: Dictionary = {}
@@ -123,6 +126,7 @@ func set_seed_and_generate(new_seed: int) -> void:
 
 
 func generate_map() -> void:
+	_ensure_beach_renderer()
 	_ensure_path_layer()
 	_ensure_cliff_renderer()
 	_init_noises()
@@ -161,6 +165,17 @@ func _init_noises() -> void:
 	path_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	path_noise.frequency = path_frequency
 	path_noise.fractal_octaves = 2
+
+
+## A praia procedural fica logo acima da grama e abaixo dos caminhos e props
+func _ensure_beach_renderer() -> void:
+	if beach_renderer:
+		return
+	beach_renderer = BeachRenderer.new()
+	beach_renderer.name = "BeachRenderer"
+	add_child(beach_renderer)
+	if ground_layer:
+		move_child(beach_renderer, ground_layer.get_index() + 1)
 
 
 func _ensure_path_layer() -> void:
@@ -226,61 +241,9 @@ func _generate_cliffs() -> void:
 
 
 func _generate_water_shores() -> void:
-	# Mapa de elevação e tipos de terreno aquático no canto sudeste
-	var water_grid: Dictionary = {}
-	var river_origin = Vector2(map_width - 1, map_height - 1)
-	
-	# 1. Classificação das zonas marítimas e costeiras com ruído orgânico
-	for x in range(int(map_width * 0.40), map_width):
-		for y in range(int(map_height * 0.40), map_height):
-			var dist = Vector2(x, y).distance_to(river_origin)
-			var n1 = moisture_noise.get_noise_2d(x * 2.2, y * 2.2) * 5.0
-			var n2 = elevation_noise.get_noise_2d(x * 4.0, y * 4.0) * 2.5
-			var threshold = 21.0 + n1 + n2
-			
-			if dist < threshold - 5.5:
-				water_grid[Vector2i(x, y)] = "DEEP"
-			elif dist < threshold:
-				water_grid[Vector2i(x, y)] = "SHALLOW"
-			elif dist < threshold + 3.5:
-				water_grid[Vector2i(x, y)] = "SAND"
-
-	# 2. Renderizar Faixa de Areia e Detalhes
-	for pos in water_grid:
-		if water_grid[pos] == "SAND":
-			if (pos.x * 3 + pos.y * 7) % 5 == 0:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SAND_DETAIL)
-			else:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SAND)
-
-	# 3. Renderizar Água e Margens de Espuma (Auto-tiling da Costa)
-	for pos in water_grid:
-		var wtype = water_grid[pos]
-		if wtype == "DEEP":
-			ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_DEEP_WATER)
-		elif wtype == "SHALLOW":
-			# Checar vizinhos para determinar a transição da praia
-			var n_up = _is_land_pos(water_grid, pos + Vector2i(0, -1))
-			var n_left = _is_land_pos(water_grid, pos + Vector2i(-1, 0))
-			var n_right = _is_land_pos(water_grid, pos + Vector2i(1, 0))
-			var n_down = _is_land_pos(water_grid, pos + Vector2i(0, 1))
-			
-			if n_up and n_left:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SHORE_INNER_SE)
-			elif n_up:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SHORE_N)
-			elif n_left:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SHORE_E)
-			elif n_right:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SHORE_W)
-			elif n_down:
-				ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_SHORE_S)
-			else:
-				# Variação sutil na água rasa cristalina
-				if (pos.x + pos.y) % 7 == 0:
-					ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_WATER_RIPPLE)
-				else:
-					ground_layer.set_cell(pos, TILE_SOURCE_ID, TILE_WATER_SHALLOW)
+	# Praia procedural no canto sudeste: transição orgânica grama/areia, areia molhada
+	# pelas ondas e mar animado via shader (sem emendas quadradas de tiles).
+	beach_renderer.generate(map_width, map_height, tile_size, seed_val)
 
 
 func _cliff_y_at(x: int) -> int:
@@ -370,6 +333,8 @@ func _is_vertex_walkable(v: Vector2i) -> bool:
 			continue
 		if cliff_renderer and cliff_renderer.is_cliff_cell(cell):
 			return false
+		if beach_renderer and beach_renderer.is_water_cell(cell):
+			return false
 		var tile := ground_layer.get_cell_atlas_coords(cell)
 		if _is_water_tile(tile) or _is_cliff_tile(tile):
 			return false
@@ -393,7 +358,7 @@ func _generate_wheat_fields() -> void:
 			var current_ground = ground_layer.get_cell_atlas_coords(pos)
 			
 			# O trigo só nasce em grama pura! Jamais em água, areia ou caminhos de pedra
-			if _is_water_or_sand(current_ground) or _is_near_path(pos, 1):
+			if _is_water_or_sand_cell(pos) or _is_water_or_sand(current_ground) or _is_near_path(pos, 1):
 				continue
 			
 			if n > 0.34:
@@ -449,24 +414,35 @@ func _spawn_landmarks_and_props() -> void:
 	_instantiate_prop(SCENE_HEDGE_MAZE, maze_pos)
 	_instantiate_prop(SCENE_HEDGE_MAZE, maze_pos + Vector2(180, 40))
 
-	# 5. Palmeiras Tropicais naturais ao longo da praia de areia
+	# 5. Palmeiras Tropicais naturais ao longo da praia de areia (com espaçamento mínimo)
 	var sand_cells: Array[Vector2i] = []
-	for x in range(int(map_width * 0.40), map_width):
-		for y in range(int(map_height * 0.40), map_height):
-			var pos = Vector2i(x, y)
-			var ground_tile = ground_layer.get_cell_atlas_coords(pos)
-			if (ground_tile == TILE_SAND or ground_tile == TILE_SAND_DETAIL) and not _is_near_path(pos, 1):
+	if beach_renderer:
+		for pos: Vector2i in beach_renderer.get_sand_cells(map_width, map_height):
+			if not _is_near_path(pos, 1):
 				sand_cells.append(pos)
-	
-	if sand_cells.size() > 0:
-		sand_cells.shuffle()
-		var palms_placed = 0
-		for p in sand_cells:
-			if palms_placed >= 4:
+
+	var palm_rng := RandomNumberGenerator.new()
+	palm_rng.seed = seed_val + 888
+	var placed_palms: Array[Vector2] = []
+	for i in range(sand_cells.size() - 1, 0, -1):
+		var j := palm_rng.randi_range(0, i)
+		var tmp := sand_cells[i]
+		sand_cells[i] = sand_cells[j]
+		sand_cells[j] = tmp
+
+	for p in sand_cells:
+		if placed_palms.size() >= 5:
+			break
+		var world_pos := Vector2(p.x * tile_size + 16, p.y * tile_size + 16)
+		var too_close := false
+		for other_pos in placed_palms:
+			if world_pos.distance_to(other_pos) < 136.0:
+				too_close = true
 				break
-			var world_pos = Vector2(p.x * tile_size + 16, p.y * tile_size + 16)
-			_instantiate_prop(SCENE_PALM_TREE, world_pos)
-			palms_placed += 1
+		if too_close:
+			continue
+		_instantiate_prop(SCENE_PALM_TREE, world_pos)
+		placed_palms.append(world_pos)
 
 	# 6. Árvores e Rochas Orgânicas pelo Mapa (Apenas em terra firme)
 	var rng = RandomNumberGenerator.new()
@@ -479,7 +455,7 @@ func _spawn_landmarks_and_props() -> void:
 		var ground_tile = ground_layer.get_cell_atlas_coords(tile_coord)
 		
 		# Nunca instanciar em água, areia ou estrada de pedras
-		if not _is_water_or_sand(ground_tile) and not _is_near_path(tile_coord, 1) \
+		if not _is_water_or_sand_cell(tile_coord) and not _is_water_or_sand(ground_tile) and not _is_near_path(tile_coord, 1) \
 				and not cliff_renderer.is_cliff_cell(tile_coord + Vector2i(0, -1)):
 			var world_pos = Vector2(rx * tile_size, ry * tile_size)
 			
@@ -585,7 +561,9 @@ func _is_pickup_spot_valid(
 ) -> bool:
 	if cell.x < 2 or cell.x >= map_width - 2 or cell.y < 2 or cell.y >= map_height - 2:
 		return false
-	if _is_water_tile(ground_layer.get_cell_atlas_coords(cell)):
+	if (beach_renderer and beach_renderer.is_water_cell(cell)) or _is_water_tile(ground_layer.get_cell_atlas_coords(cell)):
+		return false
+	if not is_world_pos_walkable(global_position + world_pos):
 		return false
 	if cliff_renderer and (cliff_renderer.is_cliff_cell(cell) or cliff_renderer.is_cliff_cell(cell + Vector2i(0, -1))):
 		return false
@@ -613,6 +591,8 @@ func is_world_pos_walkable(world_pos: Vector2) -> bool:
 	var cell := Vector2i(floori(local.x / tile_size), floori(local.y / tile_size))
 	if not _is_within_bounds(cell):
 		return false
+	if beach_renderer and beach_renderer.is_water_at(local):
+		return false
 	return not _is_water_tile(ground_layer.get_cell_atlas_coords(cell))
 
 
@@ -628,12 +608,10 @@ func _is_within_bounds(pos: Vector2i) -> bool:
 	return pos.x >= 0 and pos.x < map_width and pos.y >= 0 and pos.y < map_height
 
 
-func _is_land_pos(water_grid: Dictionary, pos: Vector2i) -> bool:
-	if not _is_within_bounds(pos):
-		return false
-	if not water_grid.has(pos):
+func _is_water_or_sand_cell(cell: Vector2i) -> bool:
+	if beach_renderer and beach_renderer.is_beach_or_water_cell(cell):
 		return true
-	return water_grid[pos] == "SAND"
+	return _is_water_or_sand(ground_layer.get_cell_atlas_coords(cell))
 
 
 func _is_water_tile(tile: Vector2i) -> bool:
