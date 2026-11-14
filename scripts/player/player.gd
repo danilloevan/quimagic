@@ -1,8 +1,7 @@
 class_name Player
 extends CharacterBody2D
 
-## Personagem jogável: movimento top-down em 8 direções (WASD / setas).
-## Animação de caminhada em 4 direções e pose parada em 8 direções.
+## Personagem jogável (Hidro): movimento top-down e animações em 8 direções (WASD / setas).
 
 @export var move_speed: float = 85.0
 ## Aceleração/desaceleração (px/s²) — deixa o movimento suave sem perder resposta
@@ -63,34 +62,19 @@ func _update_animation(input_dir: Vector2) -> void:
 
 	if moving:
 		_facing = input_dir
-		var anim := "walk_" + _walk_direction(input_dir)
+		var anim := "walk_" + _direction_octant(input_dir)
 		if sprite.animation != anim:
 			sprite.play(anim)
 		sprite.speed_scale = maxf(velocity.length() / walk_anim_reference_speed, 0.4)
 	else:
 		sprite.speed_scale = 1.0
-		var idle := "idle_" + _idle_direction(_facing)
+		var idle := "idle_" + _direction_octant(_facing)
 		if sprite.animation != idle:
 			sprite.play(idle)
 
 
-## Caminhada só tem 4 direções: escolhe o eixo dominante. Em diagonais perfeitas mantém a
-## animação atual se ela ainda for coerente, evitando que o sprite fique "piscando".
-func _walk_direction(dir: Vector2) -> String:
-	var horizontal := "east" if dir.x > 0.0 else "west"
-	var vertical := "south" if dir.y > 0.0 else "north"
-	if is_zero_approx(dir.y):
-		return horizontal
-	if is_zero_approx(dir.x):
-		return vertical
-	var current := sprite.animation.trim_prefix("walk_")
-	if current == horizontal or current == vertical:
-		return current
-	return horizontal if absf(dir.x) >= absf(dir.y) else vertical
-
-
-## Pose parada em 8 direções (os PNGs de rotação cobrem as diagonais)
-func _idle_direction(dir: Vector2) -> String:
+## Converte um vetor de direção em uma das 8 direções cardeais/diagonais
+func _direction_octant(dir: Vector2) -> String:
 	const NAMES := ["east", "south_east", "south", "south_west", "west", "north_west", "north", "north_east"]
 	var octant := wrapi(roundi(dir.angle() / (PI / 4.0)), 0, 8)
 	return NAMES[octant]

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://mopf0srx6pa3"
-path="res://.godot/imported/walk_south.png-3ad31fa27eec6941eb0eacf3ebf5f8a7.ctex"
+uid="uid://cmdv6tmh8qq1a"
+path="res://.godot/imported/wizard_lab.png-71600a2ce07225fc93cc6487c3c87a78.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/characters/student_girl/walk_south.png"
-dest_files=["res://.godot/imported/walk_south.png-3ad31fa27eec6941eb0eacf3ebf5f8a7.ctex"]
+source_file="res://assets/sprites/intro/wizard_lab.png"
+dest_files=["res://.godot/imported/wizard_lab.png-71600a2ce07225fc93cc6487c3c87a78.ctex"]
 
 [params]
 
