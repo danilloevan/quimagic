@@ -93,6 +93,8 @@ const SCENE_HEDGE_MAZE = preload("res://scenes/props/hedge_maze.tscn")
 const SCENE_TREE = preload("res://scenes/props/tree.tscn")
 const SCENE_PALM_TREE = preload("res://scenes/props/palm_tree.tscn")
 const SCENE_BOULDER = preload("res://scenes/props/boulder.tscn")
+const SCENE_ELEMENT_PICKUP = preload("res://scenes/world/element_pickup.tscn")
+const ElementPickup = preload("res://scripts/world/element_pickup.gd")
 
 var elevation_noise: FastNoiseLite
 var moisture_noise: FastNoiseLite
@@ -133,6 +135,7 @@ func generate_map() -> void:
 	_render_paths()
 	_generate_wheat_fields()
 	_spawn_landmarks_and_props()
+	_spawn_element_pickups()
 	_place_player()
 	
 	map_generated.emit(seed_val)
@@ -483,6 +486,110 @@ func _spawn_landmarks_and_props() -> void:
 					_instantiate_prop(SCENE_PALM_TREE, world_pos)
 				else:
 					_instantiate_prop(SCENE_BOULDER, world_pos)
+
+
+## Distribui coletáveis de elementos químicos (H, O, Na, Cl, C) pelos biomas do mapa.
+func _spawn_element_pickups() -> void:
+	if not props_container or not SCENE_ELEMENT_PICKUP:
+		return
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_val + 777
+
+	var cave_tile := Vector2i(int(map_width * 0.35), _cliff_y_at(int(map_width * 0.35)))
+	var well_tile := Vector2i(int(map_width * 0.45), int(map_height * 0.52))
+	var ruins_tile := Vector2i(int(map_width * 0.75), int(map_height * 0.32))
+	var maze_tile := Vector2i(int(map_width * 0.28), int(map_height * 0.72))
+	var wheat_tile := Vector2i(int(map_width * 0.62), int(map_height * 0.50))
+	var beach_tile := Vector2i(int(map_width * 0.68), int(map_height * 0.72))
+
+	var landmark_avoid: Array[Vector2] = [
+		Vector2(cave_tile.x * tile_size, cave_tile.y * tile_size),
+		Vector2(well_tile.x * tile_size, well_tile.y * tile_size),
+		Vector2(well_tile.x * tile_size, well_tile.y * tile_size) + Vector2(0, tile_size * 1.75),
+		Vector2(ruins_tile.x * tile_size, ruins_tile.y * tile_size),
+		Vector2(maze_tile.x * tile_size, maze_tile.y * tile_size),
+	]
+	var placed: Array[Vector2] = []
+
+	var specs: Array[Dictionary] = [
+		{"id": "H", "count": 8, "anchors": [well_tile, beach_tile, cave_tile], "radius": 7.0},
+		{"id": "O", "count": 8, "anchors": [wheat_tile, ruins_tile, well_tile], "radius": 8.0},
+		{"id": "Na", "count": 5, "anchors": [cave_tile, beach_tile], "radius": 6.5},
+		{"id": "Cl", "count": 5, "anchors": [maze_tile, cave_tile], "radius": 7.0},
+		{"id": "C", "count": 5, "anchors": [cave_tile, ruins_tile], "radius": 7.0},
+	]
+
+	for spec: Dictionary in specs:
+		_spawn_element_group(
+			spec["id"],
+			int(spec["count"]),
+			spec["anchors"],
+			float(spec["radius"]),
+			rng,
+			placed,
+			landmark_avoid
+		)
+
+
+func _spawn_element_group(
+	element_id: String,
+	target_count: int,
+	anchors: Array,
+	radius_tiles: float,
+	rng: RandomNumberGenerator,
+	placed: Array[Vector2],
+	landmark_avoid: Array[Vector2]
+) -> int:
+	var spawned := 0
+	var attempts := 0
+	var max_attempts := target_count * 40
+
+	while spawned < target_count and attempts < max_attempts:
+		attempts += 1
+		var candidate_cell: Vector2i
+		if attempts <= target_count * 25 and not anchors.is_empty():
+			var anchor: Vector2i = anchors[rng.randi_range(0, anchors.size() - 1)]
+			var angle := rng.randf() * TAU
+			var dist := rng.randf_range(2.0, radius_tiles)
+			candidate_cell = anchor + Vector2i(roundi(cos(angle) * dist), roundi(sin(angle) * dist))
+		else:
+			# Fallback global caso uma âncora esteja muito próxima da água/falésia
+			candidate_cell = Vector2i(rng.randi_range(3, map_width - 4), rng.randi_range(12, map_height - 4))
+
+		var world_pos := Vector2(candidate_cell.x * tile_size + tile_size * 0.5, candidate_cell.y * tile_size + tile_size * 0.5)
+		if not _is_pickup_spot_valid(candidate_cell, world_pos, placed, landmark_avoid):
+			continue
+
+		var pickup := SCENE_ELEMENT_PICKUP.instantiate() as ElementPickup
+		pickup.position = world_pos
+		pickup.setup(element_id, 1)
+		props_container.add_child(pickup)
+		placed.append(world_pos)
+		spawned += 1
+
+	return spawned
+
+
+func _is_pickup_spot_valid(
+	cell: Vector2i,
+	world_pos: Vector2,
+	placed: Array[Vector2],
+	landmark_avoid: Array[Vector2]
+) -> bool:
+	if cell.x < 2 or cell.x >= map_width - 2 or cell.y < 2 or cell.y >= map_height - 2:
+		return false
+	if _is_water_tile(ground_layer.get_cell_atlas_coords(cell)):
+		return false
+	if cliff_renderer and (cliff_renderer.is_cliff_cell(cell) or cliff_renderer.is_cliff_cell(cell + Vector2i(0, -1))):
+		return false
+	for lm_pos: Vector2 in landmark_avoid:
+		if world_pos.distance_to(lm_pos) < 34.0:
+			return false
+	for other_pos: Vector2 in placed:
+		if world_pos.distance_to(other_pos) < 28.0:
+			return false
+	return true
 
 
 ## Spawn na praça do poço, logo ao sul dele (sempre caminho livre, longe da água)

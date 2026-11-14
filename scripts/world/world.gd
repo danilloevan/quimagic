@@ -122,6 +122,25 @@ func _update_inventory_hud() -> void:
 	for id: String in ["H", "O", "Na", "Cl", "C"]:
 		items.append("%s: %d" % [id, GameState.get_count(id)])
 	text += " | ".join(items)
+	var compounds: PackedStringArray = []
 	if GameState.is_discovered("H2O"):
-		text += " | 💧 H₂O: %d" % GameState.get_count("H2O")
+		compounds.append("💧 H₂O: %d" % GameState.get_count("H2O"))
+	if GameState.is_discovered("NaCl"):
+		compounds.append("🧂 NaCl: %d" % GameState.get_count("NaCl"))
+	if GameState.is_discovered("CO2"):
+		compounds.append("💨 CO₂: %d" % GameState.get_count("CO2"))
+	if not compounds.is_empty():
+		text += " | " + " | ".join(compounds)
 	_inventory_hud_label.text = text
+
+	if _bench_hud_btn:
+		if _has_craftable_recipe():
+			_bench_hud_btn.text = "⚗ Bancada Pronta! [B]"
+		else:
+			_bench_hud_btn.text = "⚗ Abrir Bancada [B]"
+
+
+func _has_craftable_recipe() -> bool:
+	return (GameState.get_count("H") >= 2 and GameState.get_count("O") >= 1) \
+		or (GameState.get_count("Na") >= 1 and GameState.get_count("Cl") >= 1) \
+		or (GameState.get_count("C") >= 1 and GameState.get_count("O") >= 2)
