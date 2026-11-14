@@ -6,8 +6,8 @@ extends Node
 signal inventory_changed
 signal compound_discovered(id: String)
 
-## Quantidade inicial do protótipo (enquanto a coleta no mapa não está implementada)
-const STARTING_INVENTORY: Dictionary = {"H": 6, "O": 4, "Na": 2, "Cl": 2, "C": 2}
+## Estoque inicial zerado: a jogadora coleta os elementos pelo mapa antes de sintetizar na bancada
+const STARTING_INVENTORY: Dictionary = {"H": 0, "O": 0, "Na": 0, "Cl": 0, "C": 0}
 
 var inventory: Dictionary = {}
 var discovered: Array[String] = []
@@ -20,6 +20,11 @@ func _ready() -> void:
 func reset_inventory() -> void:
 	inventory = STARTING_INVENTORY.duplicate()
 	inventory_changed.emit()
+
+
+func reset_all() -> void:
+	discovered.clear()
+	reset_inventory()
 
 
 func get_count(id: String) -> int:

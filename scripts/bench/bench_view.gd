@@ -74,7 +74,13 @@ func open_bench() -> void:
 	visible = true
 	_refresh_reservoirs()
 	_update_cauldron_ui()
-	_status_label.text = "Arraste frascos ao caldeirão ou clique neles. Ajuste o fogo e sintetize!"
+	var total_stock := 0
+	for id: String in ChemistryDB.ELEMENT_ORDER:
+		total_stock += GameState.get_count(id)
+	if total_stock == 0 and cauldron_contents.is_empty():
+		_status_label.text = "Estoque vazio! Explore o mapa para coletar elementos químicos (H, O, Na, Cl, C)."
+	else:
+		_status_label.text = "Arraste frascos ao caldeirão ou clique neles. Ajuste o fogo e sintetize!"
 	_status_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 
 
