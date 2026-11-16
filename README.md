@@ -97,3 +97,11 @@ quimagic-prototype/
 2. Abra a **Godot Engine 4.7** (ou compatível com Godot 4).
 3. Clique em **Importar** e selecione o arquivo `project.godot` na raiz do projeto.
 4. Pressione **F5** (ou clique no botão **Play**) para iniciar a partir da cena principal (`scenes/ui/main_menu.tscn`).
+
+---
+
+## 📄 Direitos Autorais e Uso
+
+Copyright © 2026 **Danillo Evangelista Cabral**. Todos os direitos reservados.
+
+Este projeto é disponibilizado publicamente apenas para fins de **portfólio e avaliação técnica/acadêmica**. Não é permitida a cópia, modificação, distribuição ou uso comercial deste código sem autorização prévia por escrito. Para mais detalhes, consulte o arquivo [LICENSE](./LICENSE).
