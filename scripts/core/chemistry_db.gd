@@ -6,6 +6,16 @@ extends RefCounted
 
 const HEAT_NAMES: Array[String] = ["Desligado", "Baixo", "Médio", "Alto"]
 
+## Nomes descritivos para todos os níveis térmicos (incluindo resfriamento com gelo)
+const THERMAL_LEVEL_NAMES: Dictionary = {
+	-2: "Gelo Máximo (Congelante)",
+	-1: "Esfriando com Gelo",
+	0: "Fogo Apagado (Ambiente)",
+	1: "Fogo Baixo",
+	2: "Fogo Médio",
+	3: "Fogo Alto",
+}
+
 ## Elementos sempre exibidos na bancada (um reservatório por coletável do mapa)
 const ELEMENT_ORDER: Array[String] = ["H", "O", "Na", "Cl", "C"]
 ## Compostos aparecem como reservatório depois de descobertos
@@ -22,7 +32,7 @@ static var SUBSTANCES: Dictionary = {
 	},
 	"Na": {
 		"name": "Sódio", "formula": "Na", "kind": "element", "color": Color(0.93, 0.82, 0.45),
-		"info": "Metal alcalino macio e muito reativo. Nunca o misture com água!",
+		"info": "Metal alcalino macio e muito reativo. Nunca o misture com água em alta temperatura!",
 	},
 	"Cl": {
 		"name": "Cloro", "formula": "Cl", "kind": "element", "color": Color(0.66, 0.91, 0.42),
@@ -34,7 +44,7 @@ static var SUBSTANCES: Dictionary = {
 	},
 	"H2O": {
 		"name": "Água", "formula": "H₂O", "kind": "compound", "color": Color(0.25, 0.66, 1.0),
-		"info": "O solvente universal. Dissolve as Barreiras de Sal.",
+		"info": "O solvente universal. Dissolve as Barreiras de Sal e muda de estado com fogo ou gelo.",
 	},
 	"NaCl": {
 		"name": "Cloreto de Sódio", "formula": "NaCl", "kind": "compound", "color": Color(0.96, 0.95, 0.92),
@@ -42,7 +52,7 @@ static var SUBSTANCES: Dictionary = {
 	},
 	"CO2": {
 		"name": "Dióxido de Carbono", "formula": "CO₂", "kind": "compound", "color": Color(0.79, 0.76, 0.72),
-		"info": "Gás produzido pela combustão do carbono.",
+		"info": "Gás produzido pela combustão do carbono em fogo médio ou alto.",
 	},
 }
 
@@ -72,6 +82,7 @@ static var HAZARDS: Array[Dictionary] = [
 		"title": "O laboratório explodiu!",
 		"message": "O sódio metálico reage violentamente com a água, liberando hidrogênio e muito calor. Com o fogo alto, o hidrogênio inflamou!\n\nAproveitando o caos, Ur-Novem Duo invadiu o laboratório e destruiu todos os seus reagentes.",
 		"warning": "Faíscas e fumaça preta! O sódio reagiu violentamente com a água... por sorte o fogo estava baixo. Com mais calor, isso teria explodido!",
+		"cooled_warning": "❄️ O gelo no forno absorveu o calor da reação exotérmica entre o Sódio e a Água, evitando uma explosão! Ainda assim, esses reagentes não formam um composto simples aqui.",
 	},
 ]
 
@@ -92,8 +103,12 @@ static func name_of(id: String) -> String:
 	return get_substance(id)["name"]
 
 
-## Avalia o conteúdo do caldeirão ({id: quantidade}) com o nível de fogo atual.
-## Retorna {type: "empty" | "explosion" | "needs_heat" | "success" | "fail", ...}
+static func thermal_name_of(level: int) -> String:
+	return String(THERMAL_LEVEL_NAMES.get(clampi(level, -2, 3), "Ambiente"))
+
+
+## Avalia o conteúdo do caldeirão ({id: quantidade}) com o nível térmico atual (-2..3).
+## Retorna {type: "empty" | "explosion" | "needs_heat" | "state_change" | "success" | "fail", ...}
 static func evaluate(contents: Dictionary, heat: int) -> Dictionary:
 	if contents.is_empty():
 		return {"type": "empty"}
@@ -107,11 +122,35 @@ static func evaluate(contents: Dictionary, heat: int) -> Dictionary:
 		if k <= 0:
 			continue
 		if heat < int(recipe["heat_min"]):
+			var msg := "A mistura borbulha, mas nada acontece... Parece que falta energia: suba a alavanca para aumentar o fogo."
+			if heat < 0:
+				msg = "❄️ A mistura está resfriada com gelo! As moléculas têm pouca agitação térmica. Suba a alavanca para aquecer o caldeirão."
 			return {
 				"type": "needs_heat", "recipe": recipe,
-				"message": "A mistura borbulha, mas nada acontece... Parece que falta energia: tente aumentar o fogo.",
+				"message": msg,
 			}
 		return {"type": "success", "product": recipe["product"], "amount": k, "recipe": recipe}
+
+	# Experimento didático de estados físicos da Água (H2O puro no caldeirão)
+	if contents.size() == 1 and int(contents.get("H2O", 0)) > 0:
+		if heat < 0:
+			return {
+				"type": "state_change",
+				"state": "solid",
+				"message": "❄️ Solidificação! Com o gelo no forno (< 0 °C), a água (H₂O) perde calor e cristaliza no estado SÓLIDO!",
+			}
+		elif heat >= 2:
+			return {
+				"type": "state_change",
+				"state": "gas",
+				"message": "💨 Vaporização! Com o fogo forte (> 100 °C), as moléculas de H₂O se agitam intensamente e passam ao estado GASOSO (vapor)!",
+			}
+		else:
+			return {
+				"type": "state_change",
+				"state": "liquid",
+				"message": "💧 A água (H₂O) está no estado LÍQUIDO. Use a alavanca para Esfriar com Gelo (Sólido) ou Aquecer forte (Vapor)!",
+			}
 
 	for recipe: Dictionary in RECIPES:
 		if _same_keys(contents, recipe["reagents"]):
@@ -123,6 +162,8 @@ static func evaluate(contents: Dictionary, heat: int) -> Dictionary:
 
 	for hazard: Dictionary in HAZARDS:
 		if _contains_all(contents, hazard["reagents"]):
+			if heat < 0 and hazard.has("cooled_warning"):
+				return {"type": "fail", "message": hazard["cooled_warning"]}
 			return {"type": "fail", "message": hazard["warning"]}
 
 	return {"type": "fail", "message": "Fumaça preta! Essa combinação não forma um composto estável."}

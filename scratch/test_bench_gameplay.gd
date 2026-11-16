@@ -36,5 +36,15 @@ func _init() -> void:
 	assert(test6["type"] == "explosion", "Na + H2O com fogo deveria explodir!")
 	print("✔ Teste 6: Na + H₂O com fogo alto explode o caldeirão (Ur-Novem Duo)!")
 
+	# 7. Teste de Resfriamento com Gelo: H2O solidificando em Gelo (< 0°C)
+	var test7 = ChemistryDB.evaluate({"H2O": 1}, -2)
+	assert(test7["type"] == "state_change" and test7["state"] == "solid", "H2O com gelo deveria solidificar!")
+	print("✔ Teste 7: H₂O resfriado com gelo entra em Solidificação (Estado Sólido)!")
+
+	# 8. Teste de Resfriamento de Reação Exotérmica (Na + H2O com Gelo evita explosão)
+	var test8 = ChemistryDB.evaluate({"Na": 1, "H2O": 1}, -1)
+	assert(test8["type"] == "fail", "Na + H2O resfriado com gelo não deve explodir!")
+	print("✔ Teste 8: Na + H₂O resfriado com gelo contém a explosão exotérmica!")
+
 	print("--- TODOS OS TESTES QUÍMICOS PASSARAM COM SUCESSO! ---")
 	quit(0)
