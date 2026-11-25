@@ -102,6 +102,6 @@ quimagic-prototype/
 
 ## 📄 Direitos Autorais e Uso
 
-Copyright © 2026 **Danillo Evangelista Cabral**. Todos os direitos reservados.
+Copyright © 2026 **Equipe Commit** (Bruna, Caio, Danillo, Hiago, Mariane, Mayrom e Ravel). Todos os direitos reservados.
 
-Este projeto é disponibilizado publicamente apenas para fins de **portfólio e avaliação técnica/acadêmica**. Não é permitida a cópia, modificação, distribuição ou uso comercial deste código sem autorização prévia por escrito. Para mais detalhes, consulte o arquivo [LICENSE](./LICENSE).
+Este projeto é disponibilizado publicamente apenas para fins de **avaliação acadêmica e portfólio dos integrantes da equipe**. Não é permitida a cópia, modificação, distribuição ou uso comercial deste código e de seus recursos sem autorização prévia por escrito. Para mais detalhes, consulte o arquivo [LICENSE](./LICENSE).
